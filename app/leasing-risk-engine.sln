@@ -1,8 +1,13 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.0.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeasingRiskEngine.WpfUi", "LeasingRiskEngine.WpfUi\LeasingRiskEngine.WpfUi.csproj", "{A1B2C3D4-0000-1111-2222-333344445555}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeasingRiskEngine.Data", "LeasingRiskEngine.Data\LeasingRiskEngine.Data.csproj", "{93274059-F5FC-4441-9B20-FDF0A607AABE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeasingRiskEngine.Data.Tests", "LeasingRiskEngine.Data.Tests\LeasingRiskEngine.Data.Tests.csproj", "{83BA22C0-802F-4C73-B35B-7838C9DC1998}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -14,6 +19,14 @@ Global
 		{A1B2C3D4-0000-1111-2222-333344445555}.Debug|x64.Build.0 = Debug|x64
 		{A1B2C3D4-0000-1111-2222-333344445555}.Release|x64.ActiveCfg = Release|x64
 		{A1B2C3D4-0000-1111-2222-333344445555}.Release|x64.Build.0 = Release|x64
+		{93274059-F5FC-4441-9B20-FDF0A607AABE}.Debug|x64.ActiveCfg = Debug|x64
+		{93274059-F5FC-4441-9B20-FDF0A607AABE}.Debug|x64.Build.0 = Debug|x64
+		{93274059-F5FC-4441-9B20-FDF0A607AABE}.Release|x64.ActiveCfg = Release|x64
+		{93274059-F5FC-4441-9B20-FDF0A607AABE}.Release|x64.Build.0 = Release|x64
+		{83BA22C0-802F-4C73-B35B-7838C9DC1998}.Debug|x64.ActiveCfg = Debug|x64
+		{83BA22C0-802F-4C73-B35B-7838C9DC1998}.Debug|x64.Build.0 = Debug|x64
+		{83BA22C0-802F-4C73-B35B-7838C9DC1998}.Release|x64.ActiveCfg = Release|x64
+		{83BA22C0-802F-4C73-B35B-7838C9DC1998}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

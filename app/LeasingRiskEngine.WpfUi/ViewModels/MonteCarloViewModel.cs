@@ -1,6 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using System.Threading.Tasks;
+using LeasingRiskEngine.Data;
 using LeasingRiskEngine.WpfUi.Models;
 using LeasingRiskEngine.WpfUi.Services;
 using LeasingBridge;
@@ -18,6 +20,7 @@ namespace LeasingRiskEngine.WpfUi.ViewModels;
 public sealed class MonteCarloViewModel : ViewModelBase, IDisposable
 {
     private readonly IPipelineService _pipeline;
+    private readonly IRunHistoryStore _history;
 
     public HullWhiteInputModel HullWhite { get; } = new();
     public GbmInputModel       Gbm       { get; } = new();
@@ -144,9 +147,11 @@ public sealed class MonteCarloViewModel : ViewModelBase, IDisposable
     private readonly Action<SnapshotManaged> _progressHandler;
     private readonly Action<bool>            _busyHandler;
 
-    public MonteCarloViewModel(IPipelineService pipeline)
+    public MonteCarloViewModel(IPipelineService pipeline,
+                               IRunHistoryStore history)
     {
         _pipeline = pipeline;
+        _history  = history;
 
         _progressHandler = OnProgress;
         _busyHandler     = busy => IsBusy = busy;
@@ -217,6 +222,24 @@ public sealed class MonteCarloViewModel : ViewModelBase, IDisposable
     private async Task RunAsync()
     {
         ResetForNewRun();
+
+        // Captured now: the inputs can be edited while the run is in flight.
+        var requestedPaths = Paths;
+        var record = new SimulationRunRecord
+        {
+            Kind     = "MonteCarlo",
+            Scenario = SelectedPayoff.ToString(),
+            Scheme   = Scheme.ToString(),
+            Steps    = Steps,
+            ParametersJson = JsonSerializer.Serialize(new
+            {
+                Model = SelectedPayoff == PayoffKind.DiscountBond
+                    ? (object)HullWhite.ToNative() : Gbm.ToNative(),
+                Seed,
+                Threads,
+            }, RunJson.Options),
+        };
+
         try
         {
             SimResultManaged result;
@@ -236,10 +259,27 @@ public sealed class MonteCarloViewModel : ViewModelBase, IDisposable
                     break;
             }
             FinalResult = result;
+
+            // A cancelled run is partial, so it is not kept in the history.
+            if (result.Paths < requestedPaths) return;
+
+            record.Paths    = result.Paths;
+            record.Mean     = result.Mean;
+            record.StdError = result.StdError;
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
+            return;
+        }
+
+        try
+        {
+            await _history.AddAsync(record);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = RunJson.SaveFailed(ex);
         }
     }
 

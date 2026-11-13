@@ -17,12 +17,18 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <ui:Card Grid.Column="0" Margin="0,0,16,0" Padding="16">
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto"
+                      Margin="0,0,16,0">
+        <ui:Card Padding="16" VerticalAlignment="Top">
             <StackPanel>
                 <ui:TextBlock Appearance="Secondary"
                               Text="Параметри договору"
                               FontTypography="Subtitle"
                               Margin="0,0,0,12"/>
+
+                <TextBlock Text="Клієнт" Margin="0,8,0,4"/>
+                <ui:TextBox Text="{Binding CustomerName, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="Назва або ПІБ клієнта"/>
 
                 <TextBlock Text="Номер договору" Margin="0,8,0,4"/>
                 <ui:TextBox Text="{Binding Number, UpdateSourceTrigger=PropertyChanged}"/>
@@ -68,6 +74,36 @@
                                MinWidth="100"/>
                 </StackPanel>
 
+                <ui:Button Content="Зберегти в базу"
+                           Appearance="Secondary"
+                           Icon="{ui:SymbolIcon Symbol=Save24}"
+                           Command="{Binding SaveCommand}"
+                           Margin="0,8,0,0"
+                           MinWidth="228"/>
+
+                <TextBlock Text="Збережені договори" Margin="0,20,0,4"/>
+                <ComboBox ItemsSource="{Binding SavedContracts}"
+                          SelectedItem="{Binding SelectedSaved}"
+                          DisplayMemberPath="Title"/>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <ui:Button Content="Відкрити"
+                               Appearance="Secondary"
+                               Command="{Binding LoadCommand}"
+                               MinWidth="120"/>
+                    <ui:Button Content="Видалити"
+                               Appearance="Secondary"
+                               Command="{Binding DeleteCommand}"
+                               Margin="8,0,0,0"
+                               MinWidth="100"/>
+                </StackPanel>
+
+                <ui:InfoBar Severity="Success"
+                            IsOpen="{Binding HasStatus, Mode=OneWay}"
+                            IsClosable="False"
+                            Title="Готово"
+                            Message="{Binding StatusMessage}"
+                            Margin="0,16,0,0"/>
+
                 <ui:InfoBar Severity="Error"
                             IsOpen="{Binding HasError, Mode=OneWay}"
                             Title="Помилка"
@@ -75,6 +111,7 @@
                             Margin="0,16,0,0"/>
             </StackPanel>
         </ui:Card>
+        </ScrollViewer>
 
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>

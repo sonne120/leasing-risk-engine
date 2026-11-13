@@ -1,7 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Text.Json;
 using System.Threading.Tasks;
+using LeasingRiskEngine.Data;
 using LeasingRiskEngine.WpfUi.Models;
 using LeasingRiskEngine.WpfUi.Services;
 using LeasingBridge;
@@ -11,7 +13,8 @@ namespace LeasingRiskEngine.WpfUi.ViewModels;
 
 public sealed class StressTestsViewModel : ViewModelBase
 {
-    private readonly IRiskService _risk;
+    private readonly IRiskService     _risk;
+    private readonly IRunHistoryStore _history;
 
     public HullWhiteInputModel HullWhite { get; } = new();
     public GbmInputModel       Gbm       { get; } = new();
@@ -73,9 +76,10 @@ public sealed class StressTestsViewModel : ViewModelBase
     public DelegateCommand RunCommand   { get; }
     public DelegateCommand ClearCommand { get; }
 
-    public StressTestsViewModel(IRiskService risk)
+    public StressTestsViewModel(IRiskService risk, IRunHistoryStore history)
     {
         _risk        = risk;
+        _history     = history;
         RunCommand   = new DelegateCommand(async () => await RunAsync(),
                                             () => !IsBusy);
         ClearCommand = new DelegateCommand(() => Rows.Clear(),
@@ -86,18 +90,56 @@ public sealed class StressTestsViewModel : ViewModelBase
     {
         IsBusy = true;
         ErrorMessage = null;
+
+        // Captured now: the inputs can be edited while the run is in flight.
+        var record = new SimulationRunRecord
+        {
+            Kind   = "Stress",
+            Scheme = Scheme.ToString(),
+            Steps  = Steps,
+            Paths  = Paths,
+        };
+        object model = Kind == StressKind.HullWhiteParallelShift
+            ? HullWhite.ToNative() : Gbm.ToNative();
+        var shock   = Kind == StressKind.HullWhiteParallelShift
+            ? ShiftBps : VolMultiplier;
+        var seed    = Seed;
+        var threads = Threads;
+
         try
         {
             var row = await Task.Run(RunNative);
             Rows.Insert(0, row);
+
+            record.Scenario = row.Scenario;
+            record.Mean     = row.ShiftedMean;
+            record.Delta    = row.Delta;
+            record.ParametersJson = JsonSerializer.Serialize(new
+            {
+                Model = model,
+                Shock = shock,
+                row.BaselineMean,
+                Seed = seed,
+                Threads = threads,
+            }, RunJson.Options);
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
+            return;
         }
         finally
         {
             IsBusy = false;
+        }
+
+        try
+        {
+            await _history.AddAsync(record);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = RunJson.SaveFailed(ex);
         }
     }
 

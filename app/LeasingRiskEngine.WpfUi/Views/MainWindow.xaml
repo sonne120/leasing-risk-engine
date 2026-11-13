@@ -42,7 +42,10 @@
                                        Icon="{ui:SymbolIcon Symbol=DataHistogram24}"/>
                 <ui:NavigationViewItem Content="Стрес-тести"
                                        Tag="StressTestsView"
-                                       Icon="{ui:SymbolIcon Symbol=WarningShield24}"/>
+                                       Icon="{ui:SymbolIcon Symbol=WarningShield20}"/>
+                <ui:NavigationViewItem Content="Історія"
+                                       Tag="HistoryView"
+                                       Icon="{ui:SymbolIcon Symbol=History24}"/>
             </ui:NavigationView.MenuItems>
 
             <ui:NavigationView.ContentOverlay>

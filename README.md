@@ -102,6 +102,43 @@ The bridge needs MSVC, so the WPF app builds and runs on Windows only. .
 
 C++20, CMake, lock-free SPSC/MPMC queues + memory pool, Monte Carlo SDE schemes (Euler, Milstein), stdexec (P2300), C++/CLI, C#/.NET 8, WPF, Prism (MVVM + DI), WPF-UI, LiveCharts2.
 
+## Data storage
+
+Customers, contracts and the history of simulation runs are stored in a database through EF Core. The data layer lives in `app/LeasingRiskEngine.Data`; its tests are in `app/LeasingRiskEngine.Data.Tests`.
+
+| Table | Contents |
+|---|---|
+| `Customers` | Customer name (unique) |
+| `Contracts` | Contract inputs and the last calculated totals, linked to a customer; the contract number is unique |
+| `SimulationRuns` | One row per finished Monte Carlo, risk or stress run: scenario, scheme, paths, mean, VaR, delta, and the model parameters as JSON |
+
+The database is chosen in `appsettings.json` next to the executable:
+
+```json
+{
+  "Database": {
+    "Provider": "SqlServer",
+    "ConnectionString": ""
+  }
+}
+```
+
+| Provider | Default when `ConnectionString` is empty |
+|---|---|
+| `SqlServer` | SQL Server Express LocalDB: `Server=(localdb)\MSSQLLocalDB;Database=LeasingRiskEngine;Trusted_Connection=True;TrustServerCertificate=True` |
+| `Sqlite` | A file at `%LOCALAPPDATA%\LeasingRiskEngine\leasing.db` |
+
+To use a full SQL Server instance, put its connection string in `ConnectionString`. Prefer Windows authentication (`Trusted_Connection=True`): a password written in this file is stored as plain text.
+
+The database and its tables are created on first use. There are no migrations yet, so after a change to the entity classes an existing database has to be dropped (or migrations added).
+
+In the app, contracts are saved and reopened from the **Договори** screen, and every finished run appears on the **Історія** screen. A cancelled run is not recorded. If the database is unreachable, calculations still work and the error is shown on screen.
+
+Run the data-layer tests (any platform, they use a temporary SQLite file):
+```bash
+dotnet test app/LeasingRiskEngine.Data.Tests
+```
+
 ## Building on Windows (short guide)
 
 **Prerequisites**

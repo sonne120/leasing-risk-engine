@@ -9,7 +9,7 @@ public class MainWindowViewModel : BindableBase
 {
     private readonly DispatcherTimer _clock;
 
-    private string _statusText = "Готовий";
+    private string _statusText = "Ready";
     private string _nativeCoreInfo = "LeasingBridge.dll (native core)";
     private DateTime _currentTime = DateTime.Now;
 
@@ -39,7 +39,7 @@ public class MainWindowViewModel : BindableBase
 
         pipelineService.BusyChanged += busy =>
         {
-            StatusText = busy ? "Симуляція..." : "Готовий";
+            StatusText = busy ? "Simulation..." : "Ready";
         };
     }
 
@@ -47,11 +47,12 @@ public class MainWindowViewModel : BindableBase
     {
         StatusText = navigationKey switch
         {
-            "ContractsView"       => "Розрахунок договору",
-            "MonteCarloView"      => "Monte Carlo симуляція",
-            "RiskDashboardView"   => "Ризик-метрики",
-            "StressTestsView"     => "Стрес-тести",
-            _                     => "Готовий",
+            "ContractsView"       => "Contract calculation",
+            "MonteCarloView"      => "Monte Carlo simulation",
+            "RiskDashboardView"   => "Risk metrics",
+            "StressTestsView"     => "Stress tests",
+            "HistoryView"         => "Simulation history",
+            _                     => "Ready",
         };
     }
 }

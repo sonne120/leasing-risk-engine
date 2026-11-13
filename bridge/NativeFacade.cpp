@@ -142,7 +142,6 @@ run_stress(const Sde& baseline, const Sde& shifted,
 }
 
 // Pipeline
-
 EulerPipelineHandle create_euler_pipeline()
 {
     return static_cast<void*>(new EulerPipeline());
@@ -207,4 +206,4 @@ run_milstein_pipeline(MilsteinPipelineHandle p, const Sde& sde,
     return pipe->run(sde, cfg, payoff, bus);
 }
 
-} // namespace leasing::bridge
+} 

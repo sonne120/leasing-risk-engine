@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using System.Threading.Tasks;
+using LeasingRiskEngine.Data;
 using LeasingRiskEngine.WpfUi.Models;
 using LeasingRiskEngine.WpfUi.Services;
 using LeasingBridge;
@@ -24,7 +26,8 @@ public enum LossKind
 
 public sealed class RiskDashboardViewModel : ViewModelBase
 {
-    private readonly IRiskService _risk;
+    private readonly IRiskService     _risk;
+    private readonly IRunHistoryStore _history;
 
     public HullWhiteInputModel HullWhite { get; } = new();
     public GbmInputModel       Gbm       { get; } = new();
@@ -94,9 +97,10 @@ public sealed class RiskDashboardViewModel : ViewModelBase
 
     public DelegateCommand ComputeCommand { get; }
 
-    public RiskDashboardViewModel(IRiskService risk)
+    public RiskDashboardViewModel(IRiskService risk, IRunHistoryStore history)
     {
-        _risk = risk;
+        _risk    = risk;
+        _history = history;
 
         Series = new ISeries[]
         {
@@ -141,6 +145,24 @@ public sealed class RiskDashboardViewModel : ViewModelBase
         ErrorMessage = null;
         Result = null;
         HistogramValues.Clear();
+
+        // Captured now: the inputs can be edited while the run is in flight.
+        var record = new SimulationRunRecord
+        {
+            Kind     = "Risk",
+            Scenario = SelectedLoss.ToString(),
+            Scheme   = Scheme.ToString(),
+            Steps    = Steps,
+            Paths    = Paths,
+            ParametersJson = JsonSerializer.Serialize(new
+            {
+                Model = SelectedLoss == LossKind.ZeroBondLoss
+                    ? (object)HullWhite.ToNative() : Gbm.ToNative(),
+                Seed,
+                Threads,
+            }, RunJson.Options),
+        };
+
         try
         {
             var (risk, bins) = await Task.Run(() =>
@@ -157,14 +179,28 @@ public sealed class RiskDashboardViewModel : ViewModelBase
 
             Sections[0].Xi = Sections[0].Xj = Result!.Var95;
             Sections[1].Xi = Sections[1].Xj = Result!.Var99;
+
+            record.Mean  = risk.Mean;
+            record.Var95 = risk.Var95;
+            record.Var99 = risk.Var99;
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
+            return;
         }
         finally
         {
             IsBusy = false;
+        }
+
+        try
+        {
+            await _history.AddAsync(record);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = RunJson.SaveFailed(ex);
         }
     }
 

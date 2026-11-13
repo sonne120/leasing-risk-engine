@@ -14,32 +14,37 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Prism for DI, BindableBase, DelegateCommand, Regions, EventAggregator -->
     <PackageReference Include="Prism.DryIoc" Version="9.0.537" />
 
-    <!-- WPF-UI (lepoco/wpfui) — Fluent Design-style controls -->
     <PackageReference Include="WPF-UI" Version="3.0.5" />
 
-    <!-- InvokeCommandAction trigger — XAML side binds events to Prism commands -->
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.122" />
 
-    <!-- LiveCharts2 for live progress chart + VaR histogram -->
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF"
                       Version="2.0.0-rc5.4" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- C++/CLI bridge: mixed-mode assembly produced by the native build.
-         The relative path assumes the standard CMake output layout. -->
+
     <Reference Include="LeasingBridge">
       <HintPath>..\..\build-win\bridge\$(Configuration)\LeasingBridge.dll</HintPath>
       <Private>true</Private>
     </Reference>
   </ItemGroup>
 
-  <!-- Copy native DLL next to the exe. Required at runtime even though
-       Private=true usually handles it — mixed-mode assemblies sometimes fail
-       to be detected as native-dependent. -->
+  <ItemGroup>
+    <!-- Customers, contracts and run history (EF Core: SQL Server or SQLite). -->
+    <ProjectReference Include="..\LeasingRiskEngine.Data\LeasingRiskEngine.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Database provider and connection string, read at startup. -->
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Copy native DLL next to the exe.-->
   <Target Name="CopyBridgeDll" AfterTargets="Build"
           Condition="Exists('..\..\build-win\bridge\$(Configuration)\LeasingBridge.dll')">
     <Copy SourceFiles="..\..\build-win\bridge\$(Configuration)\LeasingBridge.dll"
