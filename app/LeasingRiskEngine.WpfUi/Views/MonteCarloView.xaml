@@ -1,0 +1,257 @@
+<UserControl x:Class="LeasingRiskEngine.WpfUi.Views.MonteCarloView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
+             xmlns:conv="clr-namespace:LeasingRiskEngine.WpfUi.Converters"
+             xmlns:models="clr-namespace:LeasingRiskEngine.WpfUi.Models"
+             xmlns:bridge="clr-namespace:LeasingBridge;assembly=LeasingBridge"
+             xmlns:prism="http://prismlibrary.com/"
+             prism:ViewModelLocator.AutoWireViewModel="True">
+
+    <UserControl.Resources>
+        <conv:PercentConverter x:Key="PercentConverter"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="380"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto"
+                      Margin="0,0,16,0">
+            <StackPanel>
+
+                <ui:Card Padding="16">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="Модель і схема"
+                                      FontTypography="Subtitle"
+                                      Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Payoff" Margin="0,4,0,4"/>
+                        <ComboBox ItemsSource="{Binding PayoffKinds}"
+                                  SelectedItem="{Binding SelectedPayoff}"/>
+
+                        <TextBlock Text="Схема інтегрування" Margin="0,12,0,4"/>
+                        <ComboBox ItemsSource="{Binding Schemes}"
+                                  SelectedItem="{Binding Scheme}"/>
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card Padding="16" Margin="0,12,0,0"
+                         Visibility="{Binding ShowHullWhite,
+                                              Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="Hull-White (r0 → P(0,T))"
+                                      FontTypography="Subtitle"
+                                      Margin="0,0,0,12"/>
+
+                        <TextBlock Text="a — mean reversion" Margin="0,4,0,4"/>
+                        <ui:NumberBox Value="{Binding HullWhite.A, Mode=TwoWay}"
+                                      Minimum="0" Maximum="5" MaxDecimalPlaces="4"/>
+
+                        <TextBlock Text="θ — long-term mean, %" Margin="0,12,0,4"/>
+                        <ui:NumberBox Value="{Binding HullWhite.Theta,
+                                                      Mode=TwoWay,
+                                                      Converter={StaticResource PercentConverter}}"
+                                      Minimum="0" Maximum="100" MaxDecimalPlaces="3"/>
+
+                        <TextBlock Text="σ — volatility" Margin="0,12,0,4"/>
+                        <ui:NumberBox Value="{Binding HullWhite.Sigma, Mode=TwoWay}"
+                                      Minimum="0" Maximum="1" MaxDecimalPlaces="5"/>
+
+                        <TextBlock Text="r0 — initial rate, %" Margin="0,12,0,4"/>
+                        <ui:NumberBox Value="{Binding HullWhite.R0,
+                                                      Mode=TwoWay,
+                                                      Converter={StaticResource PercentConverter}}"
+                                      Minimum="0" Maximum="100" MaxDecimalPlaces="3"/>
+
+                        <TextBlock Text="T — expiration, years" Margin="0,12,0,4"/>
+                        <ui:NumberBox Value="{Binding HullWhite.Expiration, Mode=TwoWay}"
+                                      Minimum="0.1" Maximum="50" MaxDecimalPlaces="2"/>
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card Padding="16" Margin="0,12,0,0"
+                         Visibility="{Binding ShowGbm,
+                                              Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="GBM (S0 → S(T))"
+                                      FontTypography="Subtitle"
+                                      Margin="0,0,0,12"/>
+
+                        <TextBlock Text="μ — drift, %" Margin="0,4,0,4"/>
+                        <ui:NumberBox Value="{Binding Gbm.Mu,
+                                                      Mode=TwoWay,
+                                                      Converter={StaticResource PercentConverter}}"
+                                      Minimum="-50" Maximum="100" MaxDecimalPlaces="3"/>
+
+                        <TextBlock Text="σ — volatility, %" Margin="0,12,0,4"/>
+                        <ui:NumberBox Value="{Binding Gbm.Sigma,
+                                                      Mode=TwoWay,
+                                                      Converter={StaticResource PercentConverter}}"
+                                      Minimum="0" Maximum="200" MaxDecimalPlaces="3"/>
+
+                        <TextBlock Text="S0 — initial price" Margin="0,12,0,4"/>
+                        <ui:NumberBox Value="{Binding Gbm.S0, Mode=TwoWay}"
+                                      Minimum="0.01" Maximum="1000000"
+                                      MaxDecimalPlaces="2"/>
+
+                        <TextBlock Text="T — expiration, years" Margin="0,12,0,4"/>
+                        <ui:NumberBox Value="{Binding Gbm.Expiration, Mode=TwoWay}"
+                                      Minimum="0.1" Maximum="50" MaxDecimalPlaces="2"/>
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card Padding="16" Margin="0,12,0,0">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="Симуляція"
+                                      FontTypography="Subtitle"
+                                      Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Кроків по часу" Margin="0,4,0,4"/>
+                        <ui:NumberBox Value="{Binding Steps, Mode=TwoWay}"
+                                      Minimum="1" Maximum="10000" MaxDecimalPlaces="0"/>
+
+                        <TextBlock Text="К-сть шляхів" Margin="0,12,0,4"/>
+                        <ui:NumberBox Value="{Binding Paths, Mode=TwoWay}"
+                                      Minimum="100" Maximum="10000000" MaxDecimalPlaces="0"/>
+
+                        <TextBlock Text="Воркерів (0 = авто)" Margin="0,12,0,4"/>
+                        <ui:NumberBox Value="{Binding Threads, Mode=TwoWay}"
+                                      Minimum="0" Maximum="64" MaxDecimalPlaces="0"/>
+
+                        <TextBlock Text="Progress, мс" Margin="0,12,0,4"/>
+                        <ui:NumberBox Value="{Binding ProgressEveryMs, Mode=TwoWay}"
+                                      Minimum="0" Maximum="5000" MaxDecimalPlaces="0"/>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                            <ui:Button Content="Запустити"
+                                       Appearance="Primary"
+                                       Command="{Binding RunCommand}"
+                                       MinWidth="130"/>
+                            <ui:Button Content="Скасувати"
+                                       Appearance="Secondary"
+                                       Command="{Binding CancelCommand}"
+                                       Margin="8,0,0,0"
+                                       MinWidth="130"/>
+                        </StackPanel>
+
+                        <ui:InfoBar Severity="Error"
+                                    IsOpen="{Binding HasError, Mode=OneWay}"
+                                    Title="Помилка"
+                                    Message="{Binding ErrorMessage}"
+                                    Margin="0,16,0,0"/>
+                    </StackPanel>
+                </ui:Card>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,12">
+                <ui:Card Padding="16" Margin="0,0,12,0">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="RUNNING MEAN"
+                                      FontSize="11"/>
+                        <ui:TextBlock FontTypography="Title"
+                                      Text="{Binding RunningMean, StringFormat='{}{0:F6}'}"/>
+                    </StackPanel>
+                </ui:Card>
+                <ui:Card Padding="16" Margin="0,0,12,0">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="STD. ERROR"
+                                      FontSize="11"/>
+                        <ui:TextBlock FontTypography="Title"
+                                      Text="{Binding RunningStdErr, StringFormat='{}{0:E3}'}"/>
+                    </StackPanel>
+                </ui:Card>
+                <ui:Card Padding="16" Margin="0,0,12,0">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="PATHS"
+                                      FontSize="11"/>
+                        <ui:TextBlock FontTypography="Title">
+                            <Run Text="{Binding PathsDone, StringFormat=N0}"/>
+                            <Run Text=" / "/>
+                            <Run Text="{Binding PathsTotal, StringFormat=N0}"/>
+                        </ui:TextBlock>
+                    </StackPanel>
+                </ui:Card>
+                <ui:Card Padding="16">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="ELAPSED"
+                                      FontSize="11"/>
+                        <ui:TextBlock FontTypography="Title"
+                                      Text="{Binding ElapsedMs, StringFormat='{}{0:F0} ms'}"/>
+                    </StackPanel>
+                </ui:Card>
+            </UniformGrid>
+
+            <ProgressBar Grid.Row="1" Height="4"
+                         Minimum="0" Maximum="100"
+                         Value="{Binding ProgressPercent, Mode=OneWay}"
+                         Margin="0,0,0,12"
+                         IsIndeterminate="False"/>
+
+            <ui:Card Grid.Row="2" Padding="8">
+                <lvc:CartesianChart Series="{Binding Series}"
+                                    XAxes="{Binding XAxes}"
+                                    YAxes="{Binding YAxes}"
+                                    LegendPosition="Top"
+                                    ZoomMode="X"/>
+            </ui:Card>
+
+            <UniformGrid Grid.Row="3" Columns="3" Margin="0,12,0,0"
+                         Visibility="{Binding HasFinalResult,
+                                              Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ui:Card Padding="16" Margin="0,0,12,0">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="FINAL MEAN"
+                                      FontSize="11"/>
+                        <ui:TextBlock FontTypography="Subtitle"
+                                      Text="{Binding FinalResult.Mean, StringFormat='{}{0:F8}'}"/>
+                    </StackPanel>
+                </ui:Card>
+                <ui:Card Padding="16" Margin="0,0,12,0">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="FINAL 95% CI"
+                                      FontSize="11"/>
+                        <ui:TextBlock FontTypography="Subtitle">
+                            <Run Text="["/>
+                            <Run Text="{Binding FinalResult.Ci95Low, StringFormat='{}{0:F6}'}"/>
+                            <Run Text=" ; "/>
+                            <Run Text="{Binding FinalResult.Ci95High, StringFormat='{}{0:F6}'}"/>
+                            <Run Text="]"/>
+                        </ui:TextBlock>
+                    </StackPanel>
+                </ui:Card>
+                <ui:Card Padding="16">
+                    <StackPanel>
+                        <ui:TextBlock Appearance="Secondary"
+                                      Text="STD. DEV"
+                                      FontSize="11"/>
+                        <ui:TextBlock FontTypography="Subtitle"
+                                      Text="{Binding FinalResult.StdDev, StringFormat='{}{0:F6}'}"/>
+                    </StackPanel>
+                </ui:Card>
+            </UniformGrid>
+        </Grid>
+    </Grid>
+</UserControl>
