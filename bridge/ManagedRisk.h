@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ManagedErrors.h"
 #include "ManagedSde.h"
 #include "ManagedTypes.h"
 #include "NativeFacade.h"
@@ -54,17 +55,19 @@ public:
                                        int threads,
                                        unsigned long long seed)
     {
-        auto sde = ToNative(params);
-        leasing::mc::PathConfig cfg{ params.Expiration, steps, false };
-        // Negate the bond price so high values mean losses.
-        auto zcb_payoff = leasing::bridge::make_zero_bond_payoff(
-            params.Expiration, steps);
-        leasing::mc::Payoff loss_payoff =
-            [zcb_payoff](const std::vector<double>& p) { return -zcb_payoff(p); };
+        try {
+            auto sde = ToNative(params);
+            leasing::mc::PathConfig cfg{ params.Expiration, steps, false };
+            auto loss_payoff = leasing::bridge::make_zero_bond_loss_payoff(
+                params.Expiration, steps);
 
-        auto res = leasing::bridge::run_risk_simulation(
-            sde, cfg, paths, loss_payoff, NativeScheme(scheme), threads, seed);
-        return ToManaged(res);
+            auto res = leasing::bridge::run_risk_simulation(
+                sde, cfg, paths, loss_payoff, NativeScheme(scheme), threads, seed);
+            return ToManaged(res);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
     // GBM
@@ -74,15 +77,19 @@ public:
                                             int threads,
                                             unsigned long long seed)
     {
-        auto sde = ToNative(params);
-        leasing::mc::PathConfig cfg{ params.Expiration, steps, false };
-        const double s0 = params.S0;
-        leasing::mc::Payoff loss_payoff =
-            [s0](const std::vector<double>& p) { return s0 - p.back(); };
+        try {
+            auto sde = ToNative(params);
+            leasing::mc::PathConfig cfg{ params.Expiration, steps, false };
+            auto loss_payoff =
+                leasing::bridge::make_residual_value_loss_payoff(params.S0);
 
-        auto res = leasing::bridge::run_risk_simulation(
-            sde, cfg, paths, loss_payoff, NativeScheme(scheme), threads, seed);
-        return ToManaged(res);
+            auto res = leasing::bridge::run_risk_simulation(
+                sde, cfg, paths, loss_payoff, NativeScheme(scheme), threads, seed);
+            return ToManaged(res);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
 private:
@@ -137,19 +144,24 @@ public:
                                                 int threads,
                                                 unsigned long long seed)
     {
-        const double shift = shiftBps / 10'000.0;
-        auto base_sde = leasing::mc::make_hull_white(
-            base.A, base.Theta, base.Sigma, base.R0, base.Expiration);
-        auto shifted  = leasing::mc::make_hull_white(
-            base.A, base.Theta + shift, base.Sigma,
-            base.R0 + shift, base.Expiration);
-        leasing::mc::PathConfig cfg{ base.Expiration, steps, false };
-        auto payoff = leasing::bridge::make_terminal_value_payoff();
+        try {
+            const double shift = shiftBps / 10'000.0;
+            auto base_sde = leasing::mc::make_hull_white(
+                base.A, base.Theta, base.Sigma, base.R0, base.Expiration);
+            auto shifted  = leasing::mc::make_hull_white(
+                base.A, base.Theta + shift, base.Sigma,
+                base.R0 + shift, base.Expiration);
+            leasing::mc::PathConfig cfg{ base.Expiration, steps, false };
+            auto payoff = leasing::bridge::make_terminal_value_payoff();
 
-        auto r = leasing::bridge::run_stress(
-            base_sde, shifted, cfg, paths, payoff,
-            RiskEngineManagedNativeScheme(scheme), threads, seed);
-        return ToManaged(r);
+            auto r = leasing::bridge::run_stress(
+                base_sde, shifted, cfg, paths, payoff,
+                RiskEngineManagedNativeScheme(scheme), threads, seed);
+            return ToManaged(r);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
     // Multiply GBM σ by `volMultiplier`.
@@ -160,17 +172,22 @@ public:
                                      int threads,
                                      unsigned long long seed)
     {
-        auto base_sde = leasing::mc::make_gbm(
-            base.Mu, base.Sigma, base.S0, base.Expiration);
-        auto shifted  = leasing::mc::make_gbm(
-            base.Mu, base.Sigma * volMultiplier, base.S0, base.Expiration);
-        leasing::mc::PathConfig cfg{ base.Expiration, steps, false };
-        auto payoff = leasing::bridge::make_terminal_value_payoff();
+        try {
+            auto base_sde = leasing::mc::make_gbm(
+                base.Mu, base.Sigma, base.S0, base.Expiration);
+            auto shifted  = leasing::mc::make_gbm(
+                base.Mu, base.Sigma * volMultiplier, base.S0, base.Expiration);
+            leasing::mc::PathConfig cfg{ base.Expiration, steps, false };
+            auto payoff = leasing::bridge::make_terminal_value_payoff();
 
-        auto r = leasing::bridge::run_stress(
-            base_sde, shifted, cfg, paths, payoff,
-            RiskEngineManagedNativeScheme(scheme), threads, seed);
-        return ToManaged(r);
+            auto r = leasing::bridge::run_stress(
+                base_sde, shifted, cfg, paths, payoff,
+                RiskEngineManagedNativeScheme(scheme), threads, seed);
+            return ToManaged(r);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
 private:

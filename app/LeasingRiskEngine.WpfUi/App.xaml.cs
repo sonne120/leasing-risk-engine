@@ -35,4 +35,10 @@ public partial class App : PrismApplication
         var regionManager = Container.Resolve<Prism.Navigation.Regions.IRegionManager>();
         regionManager.RequestNavigate("ContentRegion", nameof(ContractsView));
     }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        Container.Resolve<IPipelineService>().Dispose();
+        base.OnExit(e);
+    }
 }

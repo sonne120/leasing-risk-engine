@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "ManagedErrors.h"
 #include "ManagedSde.h"
 #include "ManagedTypes.h"
 #include "ManagedMonteCarlo.h"
@@ -32,14 +33,18 @@ public:
 
 public delegate void ProgressHandler(SnapshotManaged^ snapshot);
 
+// Native-callable entry point handed to ProgressBus. It has to be a free
+// function: the address of a ref-class member cannot be taken as a native
+// function pointer (C3374). user_data is a gcroot<MonteCarloPipelineManaged^>*.
+inline void __cdecl PipelineProgressTrampoline(
+    const leasing::pipeline::Snapshot* s, void* user_data);
+
 public ref class MonteCarloPipelineManaged {
 public:
     MonteCarloPipelineManaged()
     {
         m_euler    = leasing::bridge::create_euler_pipeline();
         m_milstein = leasing::bridge::create_milstein_pipeline();
-        m_self_root =
-            new msclr::gcroot<MonteCarloPipelineManaged^>(this);
     }
 
     ~MonteCarloPipelineManaged() { this->!MonteCarloPipelineManaged(); }
@@ -53,10 +58,6 @@ public:
         if (m_milstein) {
             leasing::bridge::destroy_milstein_pipeline(m_milstein);
             m_milstein = nullptr;
-        }
-        if (m_self_root) {
-            delete m_self_root;
-            m_self_root = nullptr;
         }
     }
 
@@ -77,12 +78,17 @@ public:
                                        int progressEveryMs,
                                        unsigned long long seed)
     {
-        auto sde = ToNative(params);
-        leasing::mc::PathConfig cfg{ params.Expiration, steps, false };
-        auto payoff = leasing::bridge::make_zero_bond_payoff(
-            params.Expiration, steps);
-        return Dispatch(sde, cfg, paths, payoff, scheme,
-                        workerThreads, progressEveryMs, seed);
+        try {
+            auto sde = ToNative(params);
+            leasing::mc::PathConfig cfg{ params.Expiration, steps, false };
+            auto payoff = leasing::bridge::make_zero_bond_payoff(
+                params.Expiration, steps);
+            return Dispatch(sde, cfg, paths, payoff, scheme,
+                            workerThreads, progressEveryMs, seed);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
     // GBM terminal distribution (streaming version).
@@ -93,14 +99,18 @@ public:
                                       int progressEveryMs,
                                       unsigned long long seed)
     {
-        auto sde = ToNative(params);
-        leasing::mc::PathConfig cfg{ params.Expiration, steps, false };
-        auto payoff = leasing::bridge::make_terminal_value_payoff();
-        return Dispatch(sde, cfg, paths, payoff, scheme,
-                        workerThreads, progressEveryMs, seed);
+        try {
+            auto sde = ToNative(params);
+            leasing::mc::PathConfig cfg{ params.Expiration, steps, false };
+            auto payoff = leasing::bridge::make_terminal_value_payoff();
+            return Dispatch(sde, cfg, paths, payoff, scheme,
+                            workerThreads, progressEveryMs, seed);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
-    // European call under GBM (streaming version).
     SimResultManaged^ RunEuropeanCall(GbmParams params,
                                        double strike,
                                        double discountRate,
@@ -110,24 +120,23 @@ public:
                                        int progressEveryMs,
                                        unsigned long long seed)
     {
-        auto sde = ToNative(params);
-        leasing::mc::PathConfig cfg{ params.Expiration, steps, false };
-        auto payoff = leasing::bridge::make_european_call_payoff(
-            strike, discountRate, params.Expiration);
-        return Dispatch(sde, cfg, paths, payoff, scheme,
-                        workerThreads, progressEveryMs, seed);
+        try {
+            auto sde = ToNative(params);
+            leasing::mc::PathConfig cfg{ params.Expiration, steps, false };
+            auto payoff = leasing::bridge::make_european_call_payoff(
+                strike, discountRate, params.Expiration);
+            return Dispatch(sde, cfg, paths, payoff, scheme,
+                            workerThreads, progressEveryMs, seed);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
-private:
-    // Static trampoline — called by the native aggregator thread.
-    static void NativeProgressTrampoline(
-        const leasing::pipeline::Snapshot* s, void* user_data)
+internal:
+    // Called by PipelineProgressTrampoline on the thread running the simulation.
+    void OnNativeSnapshot(const leasing::pipeline::Snapshot* s)
     {
-        auto* gr =
-            static_cast<msclr::gcroot<MonteCarloPipelineManaged^>*>(user_data);
-        MonteCarloPipelineManaged^ self = *gr;
-        if (!self || !s) return;
-
         auto ms = gcnew SnapshotManaged();
         ms->PathsDone  = s->paths_done;
         ms->PathsTotal = s->paths_total;
@@ -140,7 +149,21 @@ private:
         ms->Cancelled  = s->cancelled;
         ms->Final      = s->final_;
 
-        self->Progress(ms);
+        try {
+            Progress(ms);
+        }
+        catch (Exception^ ex) {
+            if (m_callback_error == nullptr)
+                m_callback_error = ex;
+            Cancel();
+        }
+    }
+
+private:
+    void ThrowIfDisposed()
+    {
+        if (m_euler == nullptr || m_milstein == nullptr)
+            throw gcnew ObjectDisposedException("MonteCarloPipelineManaged");
     }
 
     SimResultManaged^ Dispatch(const leasing::mc::Sde&    sde,
@@ -152,9 +175,14 @@ private:
                                 int                        progress_every_ms,
                                 unsigned long long         seed)
     {
+        ThrowIfDisposed();
+        m_callback_error = nullptr;
+
+        msclr::gcroot<MonteCarloPipelineManaged^> self_root(this);
+
         leasing::pipeline::ProgressBus bus;
-        bus.set_raw_callback(&NativeProgressTrampoline,
-                             static_cast<void*>(m_self_root));
+        bus.set_raw_callback(&PipelineProgressTrampoline,
+                             static_cast<void*>(&self_root));
 
         leasing::mc::SimResult result;
         if (scheme == SchemeKindManaged::Milstein) {
@@ -165,6 +193,14 @@ private:
             result = leasing::bridge::run_euler_pipeline(
                 m_euler, sde, cfg, paths,
                 worker_threads, progress_every_ms, seed, payoff, bus);
+        }
+
+        if (m_callback_error != nullptr) {
+            Exception^ inner = m_callback_error;
+            m_callback_error = nullptr;
+            throw gcnew InvalidOperationException(
+                "A Progress handler threw; the simulation was cancelled.",
+                inner);
         }
 
         auto r = gcnew SimResultManaged();
@@ -180,7 +216,17 @@ private:
     leasing::bridge::EulerPipelineHandle    m_euler;
     leasing::bridge::MilsteinPipelineHandle m_milstein;
 
-    msclr::gcroot<MonteCarloPipelineManaged^>* m_self_root;
+    Exception^ m_callback_error;
 };
+
+inline void __cdecl PipelineProgressTrampoline(
+    const leasing::pipeline::Snapshot* s, void* user_data)
+{
+    if (!s || !user_data) return;
+    auto* root =
+        static_cast<msclr::gcroot<MonteCarloPipelineManaged^>*>(user_data);
+    MonteCarloPipelineManaged^ self = *root;
+    self->OnNativeSnapshot(s);
+}
 
 } 

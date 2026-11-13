@@ -55,6 +55,10 @@ leasing::mc::Payoff make_european_call_payoff(double strike,
 
 leasing::mc::Payoff make_terminal_value_payoff();
 
+// Loss payoffs for the risk engine: higher value = bigger loss.
+leasing::mc::Payoff make_zero_bond_loss_payoff(double T, int steps);
+leasing::mc::Payoff make_residual_value_loss_payoff(double s0);
+
 // Risk
 
 leasing::risk::RiskRunResult

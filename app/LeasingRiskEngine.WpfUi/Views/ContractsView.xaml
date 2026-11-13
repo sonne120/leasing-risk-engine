@@ -126,25 +126,25 @@
                           AlternatingRowBackground="#F7F7F7">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="№"
-                                            Binding="{Binding MonthNumber}"
+                                            Binding="{Binding MonthNumber, Mode=OneTime}"
                                             Width="40"/>
                         <DataGridTextColumn Header="Дата"
-                                            Binding="{Binding Date, StringFormat=dd.MM.yyyy}"
+                                            Binding="{Binding Date, Mode=OneTime, StringFormat=dd.MM.yyyy}"
                                             Width="110"/>
                         <DataGridTextColumn Header="Платіж"
-                                            Binding="{Binding Payment,
+                                            Binding="{Binding Payment, Mode=OneTime,
                                                       Converter={StaticResource CurrencyConverter}}"
                                             Width="130"/>
                         <DataGridTextColumn Header="Тіло"
-                                            Binding="{Binding Principal,
+                                            Binding="{Binding Principal, Mode=OneTime,
                                                       Converter={StaticResource CurrencyConverter}}"
                                             Width="130"/>
                         <DataGridTextColumn Header="Відсотки"
-                                            Binding="{Binding Interest,
+                                            Binding="{Binding Interest, Mode=OneTime,
                                                       Converter={StaticResource CurrencyConverter}}"
                                             Width="130"/>
                         <DataGridTextColumn Header="Залишок"
-                                            Binding="{Binding Balance,
+                                            Binding="{Binding Balance, Mode=OneTime,
                                                       Converter={StaticResource CurrencyConverter}}"
                                             Width="140"/>
                     </DataGrid.Columns>

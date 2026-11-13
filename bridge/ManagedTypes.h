@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ManagedErrors.h"
+
 #include <leasing/core/Contract.h>
 #include <leasing/core/PaymentSchedule.h>
 
@@ -66,7 +68,7 @@ public:
                 d, downPayment);
         }
         catch (const std::exception& ex) {
-            throw gcnew ArgumentException(gcnew String(ex.what()));
+            throw ToManagedException(ex);
         }
     }
 

@@ -91,6 +91,18 @@ Payoff make_terminal_value_payoff()
     return [](const std::vector<double>& path) { return path.back(); };
 }
 
+Payoff make_zero_bond_loss_payoff(double T, int steps)
+{
+    // Negate the bond price so high values mean losses.
+    auto zcb = make_zero_bond_payoff(T, steps);
+    return [zcb](const std::vector<double>& path) { return -zcb(path); };
+}
+
+Payoff make_residual_value_loss_payoff(double s0)
+{
+    return [s0](const std::vector<double>& path) { return s0 - path.back(); };
+}
+
 // Risk
 
 RiskRunResult

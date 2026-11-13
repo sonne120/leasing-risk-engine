@@ -150,22 +150,22 @@
                       AlternatingRowBackground="#F7F7F7">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Час"
-                                        Binding="{Binding Timestamp, StringFormat=HH:mm:ss}"
+                                        Binding="{Binding Timestamp, Mode=OneTime, StringFormat=HH:mm:ss}"
                                         Width="80"/>
                     <DataGridTextColumn Header="Сценарій"
-                                        Binding="{Binding Scenario}"
+                                        Binding="{Binding Scenario, Mode=OneTime}"
                                         Width="220"/>
                     <DataGridTextColumn Header="Baseline"
-                                        Binding="{Binding BaselineMean, StringFormat='{}{0:F6}'}"
+                                        Binding="{Binding BaselineMean, Mode=OneTime, StringFormat='{}{0:F6}'}"
                                         Width="130"/>
                     <DataGridTextColumn Header="Shifted"
-                                        Binding="{Binding ShiftedMean, StringFormat='{}{0:F6}'}"
+                                        Binding="{Binding ShiftedMean, Mode=OneTime, StringFormat='{}{0:F6}'}"
                                         Width="130"/>
                     <DataGridTextColumn Header="Δ"
-                                        Binding="{Binding Delta, StringFormat='{}{0:+#.######;-#.######;0}'}"
+                                        Binding="{Binding Delta, Mode=OneTime, StringFormat='{}{0:+#.######;-#.######;0}'}"
                                         Width="130"/>
                     <DataGridTextColumn Header="Δ %"
-                                        Binding="{Binding DeltaPercent, StringFormat='{}{0:+0.00;-0.00;0.00} %'}"
+                                        Binding="{Binding DeltaPercent, Mode=OneTime, StringFormat='{}{0:+0.00;-0.00;0.00} %'}"
                                         Width="100"/>
                 </DataGrid.Columns>
             </DataGrid>

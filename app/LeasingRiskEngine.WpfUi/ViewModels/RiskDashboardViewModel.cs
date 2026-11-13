@@ -143,10 +143,17 @@ public sealed class RiskDashboardViewModel : ViewModelBase
         HistogramValues.Clear();
         try
         {
-            var run = await Task.Run(() => RunNative());
-            Result = run.Risk;
+            var (risk, bins) = await Task.Run(() =>
+            {
+                var run = RunNative();
+                return (run.Risk,
+                        BuildHistogram(run.Samples,
+                                       run.Risk.BestCase, run.Risk.WorstCase));
+            });
+            Result = risk;
 
-            BuildHistogram(run.Samples, run.Risk.BestCase, run.Risk.WorstCase);
+            foreach (var point in bins)
+                HistogramValues.Add(point);
 
             Sections[0].Xi = Sections[0].Xj = Result!.Var95;
             Sections[1].Xi = Sections[1].Xj = Result!.Var99;
@@ -174,15 +181,12 @@ public sealed class RiskDashboardViewModel : ViewModelBase
         };
     }
 
-    private void BuildHistogram(IReadOnlyList<double> samples,
-                                double min, double max)
+    private static ObservablePoint[] BuildHistogram(IReadOnlyList<double> samples,
+                                                    double min, double max)
     {
         const int Bins = 50;
         if (samples.Count == 0 || max <= min)
-        {
-            HistogramValues.Clear();
-            return;
-        }
+            return Array.Empty<ObservablePoint>();
 
         var counts = new int[Bins];
         var width  = (max - min) / Bins;
@@ -195,11 +199,12 @@ public sealed class RiskDashboardViewModel : ViewModelBase
             counts[idx]++;
         }
 
-        HistogramValues.Clear();
+        var points = new ObservablePoint[Bins];
         for (int i = 0; i < Bins; ++i)
         {
             var center = min + (i + 0.5) * width;
-            HistogramValues.Add(new ObservablePoint(center, counts[i]));
+            points[i] = new ObservablePoint(center, counts[i]);
         }
+        return points;
     }
 }

@@ -1,5 +1,3 @@
-// Portfolio risk metrics on an empirical sample distribution.
-
 #pragma once
 
 #include <algorithm>

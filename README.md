@@ -96,7 +96,7 @@ cmake -S . -B build-win -G "Visual Studio 17 2022" -A x64
 cmake --build build-win --config Release
 dotnet build app/leasing-risk-engine.sln -c Release -p:Platform=x64
 ```
-The bridge needs MSVC, so the WPF app builds and runs on Windows only. See [BUILD_WINDOWS.md](BUILD_WINDOWS.md) for prerequisites and troubleshooting.
+The bridge needs MSVC, so the WPF app builds and runs on Windows only. .
 
 ## Tech stack
 

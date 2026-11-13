@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ManagedErrors.h"
 #include "ManagedSde.h"
 #include "NativeFacade.h"
 
@@ -28,12 +29,17 @@ public:
                                         int threads,
                                         unsigned long long seed)
     {
-        auto sde = ToNative(params);
-        leasing::mc::PathConfig cfg{ params.Expiration, steps, antithetic };
-        auto payoff = leasing::bridge::make_zero_bond_payoff(
-            params.Expiration, steps);
-        return Dispatch(sde, cfg, paths, payoff, scheme, antithetic,
-                        threads, seed);
+        try {
+            auto sde = ToNative(params);
+            leasing::mc::PathConfig cfg{ params.Expiration, steps, antithetic };
+            auto payoff = leasing::bridge::make_zero_bond_payoff(
+                params.Expiration, steps);
+            return Dispatch(sde, cfg, paths, payoff, scheme, antithetic,
+                            threads, seed);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
     // European call under GBM.
@@ -47,12 +53,17 @@ public:
                                         int threads,
                                         unsigned long long seed)
     {
-        auto sde = ToNative(params);
-        leasing::mc::PathConfig cfg{ params.Expiration, steps, antithetic };
-        auto payoff = leasing::bridge::make_european_call_payoff(
-            strike, discountRate, params.Expiration);
-        return Dispatch(sde, cfg, paths, payoff, scheme, antithetic,
-                        threads, seed);
+        try {
+            auto sde = ToNative(params);
+            leasing::mc::PathConfig cfg{ params.Expiration, steps, antithetic };
+            auto payoff = leasing::bridge::make_european_call_payoff(
+                strike, discountRate, params.Expiration);
+            return Dispatch(sde, cfg, paths, payoff, scheme, antithetic,
+                            threads, seed);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
     SimResultManaged^ TerminalMeanHullWhite(HullWhiteParams params,
@@ -62,11 +73,16 @@ public:
                                             int threads,
                                             unsigned long long seed)
     {
-        auto sde = ToNative(params);
-        leasing::mc::PathConfig cfg{ params.Expiration, steps, antithetic };
-        auto payoff = leasing::bridge::make_terminal_value_payoff();
-        return Dispatch(sde, cfg, paths, payoff, scheme, antithetic,
-                        threads, seed);
+        try {
+            auto sde = ToNative(params);
+            leasing::mc::PathConfig cfg{ params.Expiration, steps, antithetic };
+            auto payoff = leasing::bridge::make_terminal_value_payoff();
+            return Dispatch(sde, cfg, paths, payoff, scheme, antithetic,
+                            threads, seed);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
     SimResultManaged^ TerminalMeanGbm(GbmParams params,
@@ -76,11 +92,16 @@ public:
                                       int threads,
                                       unsigned long long seed)
     {
-        auto sde = ToNative(params);
-        leasing::mc::PathConfig cfg{ params.Expiration, steps, antithetic };
-        auto payoff = leasing::bridge::make_terminal_value_payoff();
-        return Dispatch(sde, cfg, paths, payoff, scheme, antithetic,
-                        threads, seed);
+        try {
+            auto sde = ToNative(params);
+            leasing::mc::PathConfig cfg{ params.Expiration, steps, antithetic };
+            auto payoff = leasing::bridge::make_terminal_value_payoff();
+            return Dispatch(sde, cfg, paths, payoff, scheme, antithetic,
+                            threads, seed);
+        }
+        catch (const std::exception& ex) {
+            throw ToManagedException(ex);
+        }
     }
 
 private:
