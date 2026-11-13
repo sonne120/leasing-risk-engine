@@ -1,0 +1,6 @@
+#include "ManagedTypes.h"
+#include "ManagedCalculator.h"
+#include "ManagedSde.h"
+#include "ManagedMonteCarlo.h"
+#include "ManagedRisk.h"
+#include "ManagedPipeline.h"

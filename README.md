@@ -101,3 +101,35 @@ The bridge needs MSVC, so the WPF app builds and runs on Windows only. See [BUIL
 ## Tech stack
 
 C++20, CMake, lock-free SPSC/MPMC queues + memory pool, Monte Carlo SDE schemes (Euler, Milstein), stdexec (P2300), C++/CLI, C#/.NET 8, WPF, Prism (MVVM + DI), WPF-UI, LiveCharts2.
+
+## Building on Windows (short guide)
+
+**Prerequisites**
+- Visual Studio 2022 (17.8 or newer) with the *Desktop development with C++* workload, including **C++/CLI support for v143 build tools** (not installed by default), and the *.NET desktop development* workload (.NET 8 SDK)
+- CMake 3.20 or newer (ships with VS 2022)
+- Git
+
+**Steps** (run from the *x64 Native Tools Command Prompt for VS 2022*)
+
+```cmd
+:: 1. Configure - should print "LeasingBridge: configured for C++/CLI (Windows + MSVC)"
+cmake -S . -B build-win -G "Visual Studio 17 2022" -A x64
+
+:: 2. Build the native modules and the bridge
+cmake --build build-win --config Release -j
+
+:: 3. Run the native tests (ring_tests, core_tests, mc_tests)
+ctest --test-dir build-win -C Release --output-on-failure
+
+:: 4. Build the WPF front-end
+cd app
+dotnet restore leasing-risk-engine.sln
+dotnet build leasing-risk-engine.sln -c Release -p:Platform=x64
+```
+
+The bridge is written to `build-win\bridge\Release\LeasingBridge.dll`, and a post-build step copies it next to the WPF exe.
+
+**Common problems**
+- *"skipping - C++/CLI needs MSVC on Windows"* during configure: the command was run from a non-MSVC shell (Git Bash, MSYS) or with a non-MSVC generator.
+- *`BadImageFormatException`*: platform mismatch. The bridge is x64 only, so the WPF project must be x64 too, not AnyCPU.
+- *`Could not load file or assembly 'LeasingBridge.dll'`*: the DLL is not next to the exe. Build the bridge first, then rebuild the app.
