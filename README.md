@@ -159,35 +159,6 @@ Deleting a customer deletes its contracts. Money and rates are stored as floatin
 | `Delta` | float, nullable | Shifted minus baseline, stress runs |
 | `ParametersJson` | text | Model parameters, seed and thread count, enough to repeat the run |
 
-### Configuration
-
-The database is chosen in `appsettings.json` next to the executable:
-
-```json
-{
-  "Database": {
-    "Provider": "SqlServer",
-    "ConnectionString": ""
-  }
-}
-```
-
-| Provider | Default when `ConnectionString` is empty |
-|---|---|
-| `SqlServer` | SQL Server Express LocalDB: `Server=(localdb)\MSSQLLocalDB;Database=LeasingRiskEngine;Trusted_Connection=True;TrustServerCertificate=True` |
-| `Sqlite` | A file at `%LOCALAPPDATA%\LeasingRiskEngine\leasing.db` |
-
-To use a full SQL Server instance, put its connection string in `ConnectionString`. Prefer Windows authentication (`Trusted_Connection=True`): a password written in this file is stored as plain text.
-
-The database and its tables are created on first use. There are no migrations yet, so after a change to the entity classes an existing database has to be dropped (or migrations added).
-
-In the app, contracts are saved and reopened from the **Договори** screen, and every finished run appears on the **Історія** screen. A cancelled run is not recorded. If the database is unreachable, calculations still work and the error is shown on screen.
-
-Run the data-layer tests (any platform, they use a temporary SQLite file):
-```bash
-dotnet test app/LeasingRiskEngine.Data.Tests
-```
-
 ## Building on Windows (short guide)
 
 **Prerequisites**
