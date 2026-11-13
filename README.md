@@ -112,6 +112,55 @@ Customers, contracts and the history of simulation runs are stored in a database
 | `Contracts` | Contract inputs and the last calculated totals, linked to a customer; the contract number is unique |
 | `SimulationRuns` | One row per finished Monte Carlo, risk or stress run: scenario, scheme, paths, mean, VaR, delta, and the model parameters as JSON |
 
+### Schema
+
+```
+Customers 1 ──── * Contracts            SimulationRuns (standalone)
+```
+
+Deleting a customer deletes its contracts. Money and rates are stored as floating-point numbers, the same as in the native core; rates are fractions (0.185 = 18.5 %).
+
+**Customers**
+
+| Column | Type | Notes |
+|---|---|---|
+| `Id` | int | Primary key, auto-increment |
+| `Name` | text, max 200 | Required, unique |
+| `CreatedUtc` | datetime | When the customer was first saved |
+
+**Contracts**
+
+| Column | Type | Notes |
+|---|---|---|
+| `Id` | int | Primary key, auto-increment |
+| `CustomerId` | int | Foreign key to `Customers` |
+| `Number` | text, max 64 | Required, unique; saving an existing number updates the row |
+| `Principal`, `DownPayment` | float | Contract amount and advance payment |
+| `AnnualRate` | float | Annual interest rate as a fraction |
+| `TermMonths` | int | Contract term |
+| `PaymentType` | int | 0 = annuity, 1 = differential |
+| `StartDate` | datetime | Date only |
+| `MonthlyPayment`, `TotalPayments`, `TotalInterest` | float | Results of the last calculation |
+| `SavedUtc` | datetime | Last save time |
+
+**SimulationRuns**
+
+| Column | Type | Notes |
+|---|---|---|
+| `Id` | int | Primary key, auto-increment |
+| `CreatedUtc` | datetime | Indexed; the history is listed newest first |
+| `Kind` | text, max 32 | `MonteCarlo`, `Risk` or `Stress` |
+| `Scenario` | text, max 200 | Payoff, loss type or stress scenario |
+| `Scheme` | text, max 32 | `Euler` or `Milstein` |
+| `Steps`, `Paths` | int | Simulation size |
+| `Mean` | float | Result mean (shifted mean for stress runs) |
+| `StdError` | float, nullable | Monte Carlo runs |
+| `Var95`, `Var99` | float, nullable | Risk runs |
+| `Delta` | float, nullable | Shifted minus baseline, stress runs |
+| `ParametersJson` | text | Model parameters, seed and thread count, enough to repeat the run |
+
+### Configuration
+
 The database is chosen in `appsettings.json` next to the executable:
 
 ```json

@@ -16,7 +16,7 @@ using namespace System;
 using namespace System::Runtime::InteropServices;
 
 namespace LeasingBridge {
-// Snapshot projected into .NET.
+
 public ref class SnapshotManaged {
 public:
     property int    PathsDone;
@@ -33,9 +33,7 @@ public:
 
 public delegate void ProgressHandler(SnapshotManaged^ snapshot);
 
-// Native-callable entry point handed to ProgressBus. It has to be a free
-// function: the address of a ref-class member cannot be taken as a native
-// function pointer (C3374). user_data is a gcroot<MonteCarloPipelineManaged^>*.
+
 inline void __cdecl PipelineProgressTrampoline(
     const leasing::pipeline::Snapshot* s, void* user_data);
 
